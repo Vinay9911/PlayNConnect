@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}
+{% if page == 'setup' %}Tournament Setup
+{% elif page == 'registration' %}Team Registration
+{% elif page == 'bracket' %}Bracket Structure
+{% elif page == 'round' %}Round {{ round_num }}
+{% elif page == 'results' %}Final Results
+{% else %}Tournament App
+{% endif %}
+{% endblock %}
+
+{% block header %}
+{% if page == 'setup' %}Setup Your Tournament
+{% elif page == 'registration' %}Register Teams (Max: {{ max_teams }})
+{% elif page == 'bracket' %}Bracket Structure
+{% elif page == 'round' %}Round {{ round_num }}
+{% elif page == 'results' %}Tournament: {{ t.name }}
+{% else %}Welcome
+{% endif %}
+{% endblock %}
+
+{% block content %}
+{% if error %}
+<p class="error">{{ error }}</p>
+{% endif %}
+{% if msg %}
+<p class="error">{{ msg }}</p>
+{% endif %}
+
+{% if page == 'setup' %}
+<form method="post">
+    <label for="name">Tournament Name:</label>
+    <input type="text" id="name" name="name" required><br><br>
+    
+    <label for="max_teams">Max Number of Teams:</label>
+    <input type="number" id="max_teams" name="max_teams" min="2" required><br><br>
+    
+    <label for="bracket_type">Bracket Type:</label>
+    <select id="bracket_type" name="bracket_type">
+        <option value="single-elimination">Single-Elimination</option>
+        <option value="round-robin">Round-Robin</option>
+    </select><br><br>
+    
+    <button type="submit">Start Registration</button>
+</form>
+{% endif %}
+
+{% if page == 'registration' %}
+<p>Registered Teams: {{ teams|join(', ') }}</p>
+
+<form method="post">
+    <input type="hidden" name="action" value="add">
+    <label for="team">Team Name:</label>
+    <input type="text" id="team" name="team" required>
+    <button type="submit">Add Team</button>
+</form>
+
+<form method="post">
+    <input type="hidden" name="action" value="done">
+    <button type="submit">Done Registering</button>
+</form>
+{% endif %}
+
+{% if page == 'bracket' %}
+<ul>
+    {% for line in structure %}
+    <li>{{ line }}</li>
+    {% endfor %}
+</ul>
+
+<a href="{{ url_for('progress') }}"><button>Proceed to Tournament</button></a>
+{% endif %}
+
+{% if page == 'round' %}
+{% if round_info.byes %}
+<p>Byes: {{ round_info.byes|join(', ') }}</p>
+{% endif %}
+
+<form method="post">
+    {% for i, match in enumerate(round_info.matches) %}
+    {% set t1, t2 = match %}
+    <p>Match: {{ t1 }} vs {{ t2 }}</p>
+    <label>Rounds won by {{ t1 }}:</label>
+    <input type="number" name="score1_{{ i }}" min="0" required><br>
+    <label>Rounds won by {{ t2 }}:</label>
+    <input type="number" name="score2_{{ i }}" min="0" required><br><br>
+    {% endfor %}
+    <button type="submit">Submit Round Results</button>
+</form>
+{% endif %}
+
+{% if page == 'results' %}
+{% if t.bracket_type == 'round-robin' and t.standings %}
+<h2>Standings</h2>
+<table>
+    <tr><th>Rank</th><th>Team</th><th>Points</th><th>Matches Won</th></tr>
+    {% for rank, team in enumerate(t.standings, 1) %}
+    <tr><td>{{ rank }}</td><td>{{ team }}</td><td>{{ t.points[team] }}</td><td>{{ t.wins[team] }}</td></tr>
+    {% endfor %}
+</table>
+{% endif %}
+
+<h2>{% if t.winners|length > 1 %}Co-Winners{% else %}Winner{% endif %}</h2>
+<p>{{ t.winners|join(', ') }}{% if t.winners|length > 1 %} (unbreakable tie){% endif %}</p>
+
+<h2>Match History</h2>
+<ul>
+    {% for match in t.match_history %}
+    {% if match[4] == "bye" %}
+    <li>Bye: {{ match[0] or match[2] }}</li>
+    {% else %}
+    <li>{{ match[0] }} ({{ match[1] }}) vs {{ match[2] }} ({{ match[3] }}), Winner: {{ match[4] }}</li>
+    {% endif %}
+    {% endfor %}
+</ul>
+{% endif %}
+
+{% endblock %}
