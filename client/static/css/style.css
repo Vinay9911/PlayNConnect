@@ -1,3 +1,177 @@
-/* Optional custom styles */
-body { background-color: #f8f9fa; }
-h1 { color: #007bff; }
+.info-box, .logic-box {
+    background: #f0f8ff;
+    border-left: 4px solid #4CAF50;
+    padding: 15px;
+    margin: 20px 0;
+    border-radius: 5px;
+}
+
+.info-box h3, .logic-box h3 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.info-box p {
+    margin: 8px 0;
+}
+
+.logic-box ol {
+    margin: 10px 0;
+    padding-left: 20px;
+}
+
+.logic-box li {
+    margin: 8px 0;
+}
+
+/* Round Robin Progress Styling */
+.rounds-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+    margin: 20px 0;
+}
+
+.round-card {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 15px;
+    background: white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.round-card.completed {
+    background: #e8f5e9;
+    border-color: #4CAF50;
+}
+
+.round-card h3 {
+    margin-top: 0;
+    color: #333;
+}
+
+.completed-label {
+    color: #4CAF50;
+    font-weight: bold;
+    margin: 10px 0;
+}
+
+.match-input {
+    margin: 15px 0;
+    padding: 10px;
+    background: #f9f9f9;
+    border-radius: 5px;
+}
+
+.match-input p {
+    margin: 0 0 10px 0;
+}
+
+.match-input label {
+    display: block;
+    margin: 5px 0 2px 0;
+    font-size: 14px;
+}
+
+.match-input input {
+    width: 60px;
+    padding: 5px;
+    margin-bottom: 8px;
+}
+
+.byes {
+    background: #fff3cd;
+    padding: 8px;
+    border-radius: 5px;
+    margin: 10px 0;
+    font-style: italic;
+}
+
+.submit-round {
+    background: #4CAF50;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 10px;
+    width: 100%;
+}
+
+.submit-round:hover {
+    background: #45a049;
+}
+
+.current-standings {
+    margin-top: 30px;
+    padding: 20px;
+    background: #f5f5f5;
+    border-radius: 8px;
+}
+
+.current-standings h3 {
+    margin-top: 0;
+}
+
+.current-standings table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 15px;
+}
+
+.current-standings table th,
+.current-standings table td {
+    padding: 10px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+.current-standings table th {
+    background: #333;
+    color: white;
+}
+
+.current-standings table tr:hover {
+    background: #e0e0e0;
+}
+
+.error {
+    background: #f8d7da;
+    color: #721c24;
+    padding: 10px;
+    border-radius: 5px;
+    margin: 10px 0;
+    border: 1px solid #f5c6cb;
+}
+
+button {
+    background: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background: #0056b3;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 20px 0;
+}
+
+table th, table td {
+    padding: 12px;
+    text-align: left;
+    border-bottom: 1px solid #ddd;
+}
+
+table th {
+    background: #333;
+    color: white;
+}

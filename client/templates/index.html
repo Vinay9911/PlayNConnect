@@ -5,6 +5,7 @@
 {% elif page == 'registration' %}Team Registration
 {% elif page == 'bracket' %}Bracket Structure
 {% elif page == 'round' %}Round {{ round_num }}
+{% elif page == 'round_robin_progress' %}Tournament Progress
 {% elif page == 'results' %}Final Results
 {% else %}Tournament App
 {% endif %}
@@ -15,6 +16,7 @@
 {% elif page == 'registration' %}Register Teams (Max: {{ max_teams }})
 {% elif page == 'bracket' %}Bracket Structure
 {% elif page == 'round' %}Round {{ round_num }}
+{% elif page == 'round_robin_progress' %}Tournament Progress - Play Any Round
 {% elif page == 'results' %}Tournament: {{ t.name }}
 {% else %}Welcome
 {% endif %}
@@ -63,6 +65,7 @@
 {% endif %}
 
 {% if page == 'bracket' %}
+<h2>{% if bracket_type == 'single-elimination' %}Single-Elimination{% else %}Round-Robin{% endif %} Fixture Structure</h2>
 <ul>
     {% for line in structure %}
     <li>{{ line }}</li>
@@ -70,6 +73,62 @@
 </ul>
 
 <a href="{{ url_for('progress') }}"><button>Proceed to Tournament</button></a>
+{% endif %}
+
+{% if page == 'round_robin_progress' %}
+<div class="rounds-container">
+    {% for round_data in all_rounds %}
+    <div class="round-card {% if round_data.completed %}completed{% endif %}">
+        <h3>Round {{ round_data.round_num + 1 }} {% if round_data.completed %}✓{% endif %}</h3>
+        
+        {% if round_data.completed %}
+            <p class="completed-label">Completed</p>
+            <ul>
+                {% for match in round_data.matches %}
+                <li>{{ match[0] }} vs {{ match[1] }}</li>
+                {% endfor %}
+            </ul>
+        {% else %}
+            <form method="post" class="round-form">
+                <input type="hidden" name="round_num" value="{{ round_data.round_num }}">
+                
+                {% if round_data.byes %}
+                <p class="byes">Byes: {{ round_data.byes|join(', ') }}</p>
+                {% endif %}
+                
+                {% for i, match in enumerate(round_data.matches) %}
+                {% set t1, t2 = match %}
+                <div class="match-input">
+                    <p><strong>{{ t1 }} vs {{ t2 }}</strong></p>
+                    <label>Rounds won by {{ t1 }}:</label>
+                    <input type="number" name="score1_{{ i }}" min="0" required>
+                    <label>Rounds won by {{ t2 }}:</label>
+                    <input type="number" name="score2_{{ i }}" min="0" required>
+                </div>
+                {% endfor %}
+                
+                <button type="submit" class="submit-round">Submit Round {{ round_data.round_num + 1 }}</button>
+            </form>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div class="current-standings">
+    <h3>Current Standings</h3>
+    <table>
+        <tr><th>Team</th><th>Points</th><th>Wins</th><th>Diff</th><th>Total Score</th></tr>
+        {% for team in t.original_teams %}
+        <tr>
+            <td>{{ team }}</td>
+            <td>{{ t.points[team] }}</td>
+            <td>{{ t.wins[team] }}</td>
+            <td>{{ t.differentials[team] }}</td>
+            <td>{{ t.total_scores[team] }}</td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
 {% endif %}
 
 {% if page == 'round' %}
@@ -92,17 +151,38 @@
 
 {% if page == 'results' %}
 {% if t.bracket_type == 'round-robin' and t.standings %}
+<div class="info-box">
+    <h3>📊 How Rankings Work</h3>
+    <p><strong>Diff</strong> = Your total rounds won - opponent's total rounds won (across all matches)</p>
+    <p><strong>Total Score</strong> = Sum of all rounds you won in all matches</p>
+    <p><strong>Winner decided by:</strong> Points → Wins → Diff → Total Score</p>
+</div>
+
 <h2>Standings</h2>
 <table>
-    <tr><th>Rank</th><th>Team</th><th>Points</th><th>Matches Won</th></tr>
+    <tr><th>Rank</th><th>Team</th><th>Points</th><th>Wins</th><th>Diff</th><th>Total Score</th></tr>
     {% for rank, team in enumerate(t.standings, 1) %}
-    <tr><td>{{ rank }}</td><td>{{ team }}</td><td>{{ t.points[team] }}</td><td>{{ t.wins[team] }}</td></tr>
+    <tr><td>{{ rank }}</td><td>{{ team }}</td><td>{{ t.points[team] }}</td><td>{{ t.wins[team] }}</td><td>{{ t.differentials[team] }}</td><td>{{ t.total_scores[team] }}</td></tr>
     {% endfor %}
 </table>
 {% endif %}
 
 <h2>{% if t.winners|length > 1 %}Co-Winners{% else %}Winner{% endif %}</h2>
-<p>{{ t.winners|join(', ') }}{% if t.winners|length > 1 %} (unbreakable tie){% endif %}</p>
+<p>{{ t.winners|join(', ') }}{% if t.winners|length > 1 %} (tied on all stats){% endif %}</p>
+
+{% if t.bracket_type == 'round-robin' %}
+<div class="logic-box">
+    <h3>🏆 Winner Selection Logic</h3>
+    <ol>
+        <li><strong>Points:</strong> 3 points for each win, 0 for loss</li>
+        <li><strong>If tied on points:</strong> Compare number of wins</li>
+        <li><strong>If tied on wins:</strong> Compare differential (rounds won - rounds lost)</li>
+        <li><strong>If tied on diff:</strong> Compare total score (total rounds won)</li>
+        <li><strong>If 2 teams tied on all stats:</strong> Head-to-head winner declared champion</li>
+        <li><strong>If 3+ teams tied on all stats:</strong> Declared co-winners</li>
+    </ol>
+</div>
+{% endif %}
 
 <h2>Match History</h2>
 <ul>

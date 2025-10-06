@@ -46,9 +46,7 @@ def registration():
         elif action == 'done':
             if t.complete_registration():
                 save_tournament(t)
-                if t.bracket_type == 'single-elimination':
-                    return redirect(url_for('bracket'))
-                return redirect(url_for('progress'))
+                return redirect(url_for('bracket'))
             else:
                 msg = "Need at least 2 teams to start."
     save_tournament(t)
@@ -57,10 +55,10 @@ def registration():
 @app.route('/bracket')
 def bracket():
     t = get_tournament()
-    if not t or t.bracket_type != 'single-elimination':
+    if not t:
         return redirect(url_for('setup'))
     structure = t.get_bracket_structure()
-    return render_template('index.html', page='bracket', structure=structure)
+    return render_template('index.html', page='bracket', structure=structure, bracket_type=t.bracket_type)
 
 @app.route('/progress', methods=['GET', 'POST'])
 def progress():
@@ -69,23 +67,52 @@ def progress():
         return redirect(url_for('setup'))
     if t.is_tournament_complete():
         return redirect(url_for('results'))
-    round_info = t.get_current_round_info()
-    if round_info is None:
-        return redirect(url_for('results'))
-    error = None
-    if request.method == 'POST':
-        results = {}
-        try:
-            for i, match in enumerate(round_info['matches']):
-                s1 = int(request.form[f'score1_{i}'])
-                s2 = int(request.form[f'score2_{i}'])
-                results[match] = (s1, s2)
-            t.submit_round_results(results)
-            save_tournament(t)
-            return redirect(url_for('progress'))
-        except (ValueError, KeyError) as e:
-            error = str(e)
-    return render_template('index.html', page='round', round_num=t.current_round + 1, round_info=round_info, error=error)
+    
+    # Round-robin: show all rounds with selection
+    if t.bracket_type == 'round-robin':
+        all_rounds = t.get_all_rounds_info()
+        error = None
+        
+        if request.method == 'POST':
+            try:
+                round_num = int(request.form.get('round_num'))
+                results = {}
+                round_matches = t.fixtures[round_num]
+                
+                for i, match in enumerate(round_matches):
+                    s1 = int(request.form[f'score1_{i}'])
+                    s2 = int(request.form[f'score2_{i}'])
+                    results[match] = (s1, s2)
+                
+                t.submit_round_results(results, round_num=round_num)
+                save_tournament(t)
+                return redirect(url_for('progress'))
+            except (ValueError, KeyError) as e:
+                error = str(e)
+        
+        return render_template('index.html', page='round_robin_progress', 
+                             all_rounds=all_rounds, error=error, t=t)
+    
+    # Single-elimination: sequential as before
+    else:
+        round_info = t.get_current_round_info()
+        if round_info is None:
+            return redirect(url_for('results'))
+        error = None
+        if request.method == 'POST':
+            results = {}
+            try:
+                for i, match in enumerate(round_info['matches']):
+                    s1 = int(request.form[f'score1_{i}'])
+                    s2 = int(request.form[f'score2_{i}'])
+                    results[match] = (s1, s2)
+                t.submit_round_results(results)
+                save_tournament(t)
+                return redirect(url_for('progress'))
+            except (ValueError, KeyError) as e:
+                error = str(e)
+        return render_template('index.html', page='round', round_num=t.current_round + 1, 
+                             round_info=round_info, error=error)
 
 @app.route('/results')
 def results():
