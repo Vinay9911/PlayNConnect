@@ -4,7 +4,7 @@ from fastapi.security import OAuth2PasswordBearer
 from services.auth import verify_user_token
 
 # This scheme tells FastAPI where to look for the token (in the Authorization header)
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login")
 
 def get_current_user(token: str = Depends(oauth2_scheme)):
     """
