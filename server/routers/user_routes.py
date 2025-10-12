@@ -1,5 +1,5 @@
 # server/routers/user_routes.py (CORRECTED)
-from fastapi import APIRouter, Depends, status, HTTPException
+from fastapi import APIRouter, Depends, status, HTTPException, File, UploadFile
 from pydantic import BaseModel, Field
 from typing import Dict, Any, Optional
 from uuid import UUID
@@ -14,33 +14,23 @@ router = APIRouter(
 
 # --- Pydantic Models for Profile Data ---
 
-class GameIDs(BaseModel):
-    """Schema for the game_ids jsonb column."""
-    codm: Optional[str] = Field(None, example="PlayerTag#12345")
-    valorant: Optional[str] = Field(None, example="ProGamer#EUW")
-    # ... add more games
-
-class SocialLinks(BaseModel):
-    """Schema for the social_links jsonb column."""
-    twitter: Optional[str] = Field(None, example="https://twitter.com/myhandle")
-    discord: Optional[str] = Field(None, example="myhandle#0001")
-    # ... add more social links
-
 class UserProfileCreate(BaseModel):
     """Required fields for creating a new user profile."""
-    username: str = Field(..., min_length=3, max_length=50, example="vinay9911")
-    full_name: Optional[str] = Field(None, max_length=100, example="Vinay Sharma")
-    photo_url: Optional[str] = Field(None, example="http://example.com/photo.jpg")
-    game_ids: Optional[GameIDs] = GameIDs()
-    social_links: Optional[SocialLinks] = SocialLinks()
+    username: str = Field(..., min_length=3, max_length=50)
+    full_name: Optional[str] = Field(None, max_length=100)
+    photo_url: Optional[str] = None
+    # UPDATED: Accept any string keys
+    game_ids: Optional[Dict[str, str]] = {}
+    social_links: Optional[Dict[str, str]] = {}
 
 class UserProfileUpdate(BaseModel):
     """Optional fields for updating a user profile."""
-    username: Optional[str] = Field(None, min_length=3, max_length=50, example="vinay9911_new")
-    full_name: Optional[str] = Field(None, max_length=100, example="Vinay Sharma")
-    photo_url: Optional[str] = Field(None, example="http://example.com/newphoto.jpg")
-    game_ids: Optional[GameIDs] = None
-    social_links: Optional[SocialLinks] = None
+    username: Optional[str] = Field(None, min_length=3, max_length=50)
+    full_name: Optional[str] = Field(None, max_length=100)
+    photo_url: Optional[str] = None
+    # UPDATED: Accept any string keys
+    game_ids: Optional[Dict[str, str]] = None
+    social_links: Optional[Dict[str, str]] = None
 
 class UserProfileResponse(BaseModel):
     """Full schema of the user profile stored in the database."""
@@ -104,6 +94,36 @@ def get_profile(current_user: User = Depends(get_current_user)):
     [READ] Retrieves the complete user profile from the public.users table.
     """
     return user_service.get_user_profile(current_user.id)
+
+@router.get("/profile/{username}", response_model=UserProfileResponse)
+def get_public_profile(username: str):
+    """
+    [READ PUBLIC] Retrieves a user profile by their username.
+    This endpoint does not require authentication.
+    """
+    return user_service.get_user_profile_by_username(username=username)
+
+@router.post("/profile/avatar", response_model=Dict[str, str])
+def upload_user_avatar(
+    current_user: User = Depends(get_current_user),
+    file: UploadFile = File(...)
+):
+    """
+    [NEW LOGIC] Uploads an avatar to storage and returns the public URL.
+    It does NOT save the URL to the database.
+    """
+    try:
+        # 1. Upload the avatar file to Supabase Storage
+        avatar_url = user_service.upload_avatar(user_id=current_user.id, file=file)
+
+        if not avatar_url:
+            raise HTTPException(status_code=500, detail="Could not retrieve public URL for avatar.")
+
+        # 2. Simply return the URL to the frontend
+        return {"message": "Avatar uploaded successfully", "photo_url": avatar_url}
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail="An unexpected server error occurred during avatar processing.")
 
 
 @router.put("/profile", response_model=UserProfileResponse)

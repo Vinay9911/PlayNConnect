@@ -1,1 +1,29 @@
 @import "tailwindcss";
+
+/* Custom Scrollbar Styling */
+@layer base {
+  /* For Webkit-based browsers (Chrome, Safari, Edge) */
+  ::-webkit-scrollbar {
+    width: 10px; /* Width of the scrollbar */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #1a1f2e; /* Dark navy background for the track */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: #FF5733; /* Coral/Orange for the draggable thumb */
+    border-radius: 20px; /* Rounded corners for the thumb */
+    border: 2px solid #1a1f2e; /* Creates a padding effect around the thumb */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: #e64a19; /* A slightly darker orange for the hover state */
+  }
+
+  /* For Firefox */
+  html {
+    scrollbar-width: thin;
+    scrollbar-color: #FF5733 #1a1f2e; /* thumb color track color */
+  }
+}

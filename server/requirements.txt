@@ -8,3 +8,4 @@ gotrue
 
 #Configuration Management
 pydantic-settings
+python-multipart
