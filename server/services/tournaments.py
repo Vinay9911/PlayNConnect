@@ -34,11 +34,13 @@ def _check_permission(tournament_id: UUID, user_id: UUID, allowed_roles: list = 
 def create_new_tournament(tournament_data: dict, user_id: UUID) -> dict:
     """Inserts a new tournament and creates the owner relationship."""
     logger.info(f"Creating tournament for user_id: {user_id}")
+    
     slug = _generate_slug(tournament_data['name'])
     tournament_data['slug'] = slug
     tournament_data.pop('organizers', None)
+    tournament_data['created_by'] = str(user_id)
 
-    # FIX: Convert the datetime object to an ISO 8601 string
+    # FIX: Convert the datetime object to an ISO 8601 formatted string before inserting
     if 'start_date' in tournament_data and isinstance(tournament_data['start_date'], datetime):
         tournament_data['start_date'] = tournament_data['start_date'].isoformat()
 
@@ -119,6 +121,10 @@ def update_existing_tournament(tournament_id: UUID, update_data: dict, user_id: 
     if not _check_permission(tournament_id, user_id):
         logger.warning(f"Permission denied for user {user_id} to update tournament {tournament_id}")
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="You do not have permission to edit this tournament.")
+
+    # FIX: Also convert the start_date here if it's being updated
+    if 'start_date' in update_data and isinstance(update_data['start_date'], datetime):
+        update_data['start_date'] = update_data['start_date'].isoformat()
 
     update_data['updated_at'] = datetime.utcnow().isoformat()
     try:
