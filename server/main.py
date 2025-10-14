@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from routers import user_routes, auth_routes, tournament_routes
+from routers import user_routes, auth_routes, tournament_routes, teams_routes
 from fastapi.middleware.cors import CORSMiddleware
 from config.config import settings
 
@@ -26,7 +26,7 @@ app.add_middleware(
 app.include_router(auth_routes.router)
 app.include_router(user_routes.router)
 app.include_router(tournament_routes.router)
-
+app.include_router(teams_routes.router)
 
 @app.get("/", tags=["Root"])
 def read_root():

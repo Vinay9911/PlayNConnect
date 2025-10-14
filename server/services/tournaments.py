@@ -38,6 +38,10 @@ def create_new_tournament(tournament_data: dict, user_id: UUID) -> dict:
     tournament_data['slug'] = slug
     tournament_data.pop('organizers', None)
 
+    # FIX: Convert the datetime object to an ISO 8601 string
+    if 'start_date' in tournament_data and isinstance(tournament_data['start_date'], datetime):
+        tournament_data['start_date'] = tournament_data['start_date'].isoformat()
+
     try:
         response = supabase_client.table('tournaments').insert(tournament_data).execute()
         if not response.data:
@@ -62,6 +66,8 @@ def create_new_tournament(tournament_data: dict, user_id: UUID) -> dict:
     except Exception as e:
         logger.exception(f"Error during tournament creation: {e}")
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+
 
 def get_tournament_by_slug(slug: str) -> dict:
     """Retrieves a tournament and its organizers by its public slug."""
