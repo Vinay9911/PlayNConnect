@@ -9,6 +9,7 @@ import ProfileForm from './pages/ProfileForm.jsx';
 import ProfileView from './pages/ProfileView.jsx';
 import TournamentFormPage from './pages/TournamentFormPage.jsx';
 import TournamentViewPage from './pages/TournamentView.jsx';
+import TournamentRegistrationPage from './pages/TournamentRegistrationPage.jsx';
 import pNcLogo from './assets/playnconnect_logo.png';
 
 // This component contains all the routes and logic that need access to the user context.
@@ -57,6 +58,7 @@ const AppContent = () => {
                 <Route path="/tournaments/create" element={session ? <TournamentFormPage /> : <AuthPage />} />
                 <Route path="/tournaments/:slug/edit" element={session ? <TournamentFormPage /> : <AuthPage />} />
                 <Route path="/tournaments/:slug" element={<TournamentViewPage />} />
+                <Route path="/tournaments/:slug/register" element={session ? <TournamentRegistrationPage /> : <AuthPage />} />
             </Routes>
         </div>
     );

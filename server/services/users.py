@@ -2,7 +2,7 @@
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict
+from typing import Any, Dict, List
 from uuid import UUID
 
 from fastapi import HTTPException, status, UploadFile
@@ -99,6 +99,30 @@ def get_user_profile_by_username(username: str) -> dict:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An unexpected error occurred while fetching the profile."
+        )
+        
+def search_users_by_username(query: str, current_user_id: UUID) -> List[dict]:
+    """Searches for users by username using full-text search."""
+    logger.info(f"Searching for users with username matching: {query}")
+    try:
+        # Use 'plfts' for plain text search which is safer
+        # The ':*' tells postgres to do a prefix search (e.g., 'Team' matches 'TeamMate')
+        response = supabase_client.table('users').select("id, username, photo_url") \
+            .neq('id', str(current_user_id)) \
+            .limit(10) \
+            .text_search('username', f"{query}:*") \
+            .execute()
+        
+        if not response.data:
+            return []
+            
+        return response.data
+        
+    except Exception as e:
+        logger.exception(f"Error searching for users: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An unexpected error occurred while searching for users."
         )
 
 def update_user_profile(user_id: UUID, update_data: Dict[str, Any]) -> dict:

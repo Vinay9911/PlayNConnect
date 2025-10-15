@@ -99,9 +99,9 @@ const TournamentViewPage = () => {
                         </Link>
                     </div>
                 ) : (
-                    <button className="bg-green-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-green-700 transition text-lg">
+                    <Link to={`/tournaments/${slug}/register`} className="bg-green-600 text-white font-bold py-3 px-12 rounded-lg hover:bg-green-700 transition text-lg">
                         Register Your Team
-                    </button>
+                    </Link>
                 )}
             </div>
         </div>

@@ -1,7 +1,7 @@
 # server/routers/teams_routes.py
 from fastapi import APIRouter, Depends, status, Path
 from pydantic import BaseModel, Field
-from typing import List
+from typing import List, Union
 from uuid import UUID
 from gotrue import User
 from utils.dependency import get_current_user
@@ -18,7 +18,7 @@ class TeamCreate(BaseModel):
     name: str = Field(..., example="The Champions")
 
 class TeamMemberAdd(BaseModel):
-    user_id: UUID
+    user_ids: Union[UUID, List[UUID]]
 
 # --- API Endpoints ---
 @router.post("/tournaments/{tournament_id}/teams", status_code=status.HTTP_201_CREATED)
@@ -36,18 +36,18 @@ def register_team_for_tournament(
     return {"message": "Team registered successfully!", "data": new_team}
 
 @router.post("/{team_id}/members", status_code=status.HTTP_201_CREATED)
-def add_team_member(
+def add_team_members(
     member_data: TeamMemberAdd,
-    team_id: UUID = Path(..., description="The ID of the team to add a member to."),
+    team_id: UUID = Path(..., description="The ID of the team to add members to."),
     current_user: User = Depends(get_current_user)
 ):
-    """Adds a new member to a team. Only the team leader can perform this action."""
-    new_member = team_service.add_member_to_team(
+    """Adds one or more new members to a team. Only the team leader can perform this action."""
+    new_members = team_service.add_members_to_team(
         team_id=team_id,
-        user_id=member_data.user_id,
+        user_ids=member_data.user_ids,
         requester_id=current_user.id
     )
-    return {"message": "Team member added successfully!", "data": new_member}
+    return {"message": "Team members added successfully!", "data": new_members}
 
 @router.get("/tournaments/{tournament_id}", response_model=List[dict])
 def get_tournament_teams(
