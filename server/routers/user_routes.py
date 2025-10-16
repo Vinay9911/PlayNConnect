@@ -1,7 +1,7 @@
 # server/routers/user_routes.py (CORRECTED)
 from fastapi import APIRouter, Depends, status, HTTPException, File, UploadFile
 from pydantic import BaseModel, Field
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
 from uuid import UUID
 from gotrue import User
 from utils.dependency import get_current_user
@@ -43,6 +43,12 @@ class UserProfileResponse(BaseModel):
     social_links: Dict[str, Any]
     created_at: str 
     updated_at: str
+    
+class UserSearchResponse(BaseModel):
+    """Schema for user search results."""
+    id: UUID
+    username: str
+    photo_url: Optional[str] = None
 
 # --- API Endpoints ---
 
@@ -94,6 +100,22 @@ def get_profile(current_user: User = Depends(get_current_user)):
     [READ] Retrieves the complete user profile from the public.users table.
     """
     return user_service.get_user_profile(current_user.id)
+
+@router.get("/search/{query}", response_model=List[UserSearchResponse])
+def search_for_users(
+    query: str,
+    current_user: User = Depends(get_current_user)
+):
+    """
+    [SEARCH] Searches for users by username.
+    This endpoint requires authentication.
+    """
+    if not query or len(query) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must be at least 3 characters long."
+        )
+    return user_service.search_users_by_username(query=query, current_user_id=current_user.id)
 
 @router.get("/profile/{username}", response_model=UserProfileResponse)
 def get_public_profile(username: str):

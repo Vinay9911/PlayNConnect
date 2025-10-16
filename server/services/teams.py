@@ -1,11 +1,10 @@
-# server/services/teams.py
 import logging
 from uuid import UUID
 from fastapi import HTTPException, status
 from utils.supabase import supabase_client
+from typing import List, Union
 
 logger = logging.getLogger(__name__)
-
 
 
 def create_team_for_tournament(tournament_id: UUID, team_name: str, leader_id: UUID) -> dict:
@@ -45,16 +44,15 @@ def create_team_for_tournament(tournament_id: UUID, team_name: str, leader_id: U
         # This will now only catch unexpected errors
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred during team creation.")
 
-# server/services/teams.py
+def add_members_to_team(team_id: UUID, user_ids: Union[UUID, List[UUID]], requester_id: UUID) -> List[dict]:
+    """Adds one or more users to a team, checking for leader's permission."""
+    
+    # If a single UUID is passed, convert it to a list for consistent processing
+    if not isinstance(user_ids, list):
+        user_ids = [user_ids]
 
-# ... (imports and other functions remain the same)
-# server/services/teams.py
-
-# ... (imports and other functions remain the same)
-
-def add_member_to_team(team_id: UUID, user_id: UUID, requester_id: UUID) -> dict:
-    """Adds a user to a team, checking for leader's permission."""
-    logger.info(f"User {requester_id} attempting to add user {user_id} to team {team_id}")
+    logger.info(f"User {requester_id} attempting to add {len(user_ids)} members to team {team_id}")
+    
     try:
         # 1. Check if the requester is the team leader
         team_response = supabase_client.table('teams').select('leader_id').eq('id', str(team_id)).single().execute()
@@ -62,29 +60,28 @@ def add_member_to_team(team_id: UUID, user_id: UUID, requester_id: UUID) -> dict
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found.")
 
         leader_id_from_db = team_response.data['leader_id']
-
-        # FINAL FIX: Compare the plain string values of the IDs
         if str(leader_id_from_db) != str(requester_id):
-            # This check will now be 100% accurate based on the text value
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the team leader can add members.")
 
-        # 2. Check if the user profile for the member-to-be-added exists
-        member_profile = supabase_client.table('users').select('id', count='exact').eq('id', str(user_id)).execute()
-        if member_profile.count == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"User profile for user ID {user_id} not found.")
+        # 2. Prepare the data for a bulk insert
+        members_to_add = [
+            {"team_id": str(team_id), "user_id": str(user_id)}
+            for user_id in user_ids
+        ]
 
-        # 3. Add the new member
-        member_data = { "team_id": str(team_id), "user_id": str(user_id) }
-        response = supabase_client.table('team_members').insert(member_data).execute()
+        # 3. Perform a single bulk insert operation
+        response = supabase_client.table('team_members').insert(members_to_add).execute()
+        
         if not response.data:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Could not add member. They may already be on the team.")
-        return response.data[0]
-    
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Could not add members. They may already be on the team or user IDs are invalid.")
+            
+        return response.data
+
     except HTTPException as http_exc:
         raise http_exc
         
     except Exception as e:
-        logger.exception(f"Error adding member to team: {e}")
+        logger.exception(f"Error adding members to team: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
 def get_user_teams(user_id: UUID) -> list:

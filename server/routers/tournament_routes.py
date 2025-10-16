@@ -12,8 +12,7 @@ from utils.dependency import get_current_user
 
 router = APIRouter(
     prefix="/tournaments",
-    tags=["Tournaments"],
-    dependencies=[Depends(get_current_user)]
+    tags=["Tournaments"]
 )
 
 # --- Pydantic Models ---
@@ -79,12 +78,10 @@ def get_user_tournaments(current_user: User = Depends(get_current_user)):
     """Retrieves all tournaments organized by the current user."""
     return tournament_service.get_my_tournaments(user_id=current_user.id)
 
+# This endpoint is NOW PUBLIC, no auth needed.
 @router.get("/slug/{slug}", response_model=dict)
 def get_tournament_public(slug: str):
-    """
-    Retrieves a single tournament's public details by its slug.
-    This endpoint is public and does not require authentication.
-    """
+    """Retrieves a single tournament's public details by its slug."""
     return tournament_service.get_tournament_by_slug(slug=slug)
 
 @router.get("/", response_model=List[dict])
