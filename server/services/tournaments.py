@@ -3,7 +3,7 @@ from uuid import UUID
 from datetime import datetime
 import re
 import random
-
+from typing import List
 from fastapi import HTTPException, status, UploadFile
 from datetime import timedelta
 import os
@@ -180,3 +180,40 @@ def upload_tournament_image(tournament_id: UUID, user_id: UUID, file: UploadFile
     except Exception as e:
         logger.exception(f"Error uploading image for tournament {tournament_id}: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload tournament image.")
+    
+def search_tournaments_by_name(query: str) -> List[dict]:
+    """Searches for tournaments by name using full-text search."""
+    logger.info(f"Searching for tournaments with name matching: {query}")
+    try:
+        # ':*' performs a prefix search (e.g., 'Valo' matches 'Valorant')
+        response = supabase_client.table('tournaments') \
+            .select("id, name, slug, game, image_url") \
+            .limit(10) \
+            .text_search('name', f"{query}:*", config='english') \
+            .execute()
+
+        return response.data or []
+
+    except Exception as e:
+        # Catch potential errors from text_search if config isn't supported, like before
+        if "unexpected keyword argument 'config'" in str(e):
+             logger.warning("text_search config keyword not supported by current library version. Retrying without it.")
+             try:
+                 response = supabase_client.table('tournaments') \
+                     .select("id, name, slug, game, image_url") \
+                     .limit(10) \
+                     .text_search('name', f"{query}:*") \
+                     .execute()
+                 return response.data or []
+             except Exception as fallback_e:
+                 logger.exception(f"Error searching tournaments (fallback): {fallback_e}")
+                 raise HTTPException(
+                     status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                     detail="An unexpected error occurred during tournament search."
+                 )
+        else:
+            logger.exception(f"Error searching tournaments: {e}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="An unexpected error occurred during tournament search."
+            )

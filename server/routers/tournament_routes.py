@@ -35,6 +35,12 @@ class TournamentUpdate(BaseModel):
     max_teams: Optional[int] = Field(None, gt=1)
     max_players_per_team: Optional[int] = Field(None, gt=0)
 
+class TournamentSearchResponse(BaseModel):
+    id: UUID
+    name: str
+    slug: str
+    game: Optional[str] = None
+    image_url: Optional[str] = None
 
 # --- API Endpoints ---
 @router.post("/", status_code=status.HTTP_201_CREATED)
@@ -122,3 +128,16 @@ def delete_tournament(
         user_id=current_user.id
     )
     return
+
+@router.get("/search/{query}", response_model=List[TournamentSearchResponse])
+def search_for_tournaments(query: str):
+    """
+    [SEARCH] Searches for tournaments by name.
+    This endpoint is public.
+    """
+    if not query or len(query) < 3:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Search query must be at least 3 characters long."
+        )
+    return tournament_service.search_tournaments_by_name(query=query)
