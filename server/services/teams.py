@@ -6,10 +6,33 @@ from typing import List, Union
 
 logger = logging.getLogger(__name__)
 
+def _is_user_in_tournament_team(user_id: UUID, tournament_id: UUID) -> bool:
+    """Checks if a user is already a member of any team in a specific tournament."""
+    try:
+        # Query team_members, join with teams, filter by user_id and tournament_id
+        response = supabase_client.table('team_members') \
+            .select('user_id', count='exact') \
+            .eq('user_id', str(user_id)) \
+            .inner().eq('teams.tournament_id', str(tournament_id)) \
+            .execute()
+        
+        # Check if the count is greater than 0
+        return response.count > 0
+    except Exception as e:
+        logger.error(f"Error checking if user {user_id} is in tournament {tournament_id}: {e}")
+        # Fail safe - assume user might be in a team to prevent errors
+        # Or raise an internal server error if strictness is required
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Could not verify user's tournament participation.")
 
 def create_team_for_tournament(tournament_id: UUID, team_name: str, leader_id: UUID) -> dict:
     """Creates a new team for a tournament and sets the creator as the leader."""
     logger.info(f"User {leader_id} creating team '{team_name}' for tournament {tournament_id}")
+    
+    if _is_user_in_tournament_team(leader_id, tournament_id):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="You are already registered in a team for this tournament."
+        )
     try:
         # Check if a team with the same name already exists in the tournament
         existing_team = supabase_client.table('teams').select('id', count='exact').eq('tournament_id', str(tournament_id)).eq('name', team_name).execute()
@@ -45,9 +68,8 @@ def create_team_for_tournament(tournament_id: UUID, team_name: str, leader_id: U
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred during team creation.")
 
 def add_members_to_team(team_id: UUID, user_ids: Union[UUID, List[UUID]], requester_id: UUID) -> List[dict]:
-    """Adds one or more users to a team, checking for leader's permission."""
+    """Adds one or more users to a team, checking for leader's permission and existing membership."""
     
-    # If a single UUID is passed, convert it to a list for consistent processing
     if not isinstance(user_ids, list):
         user_ids = [user_ids]
 
@@ -55,25 +77,41 @@ def add_members_to_team(team_id: UUID, user_ids: Union[UUID, List[UUID]], reques
     
     try:
         # 1. Check if the requester is the team leader
-        team_response = supabase_client.table('teams').select('leader_id').eq('id', str(team_id)).single().execute()
+        team_response = supabase_client.table('teams').select('leader_id, tournament_id').eq('id', str(team_id)).single().execute()
         if not team_response.data:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Team not found.")
 
         leader_id_from_db = team_response.data['leader_id']
+        tournament_id = team_response.data['tournament_id'] # Get tournament_id from the team
+        
         if str(leader_id_from_db) != str(requester_id):
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Only the team leader can add members.")
 
-        # 2. Prepare the data for a bulk insert
+        users_already_in_team = []
+        for user_id in user_ids:
+             # Check if the user to be added is already in *any* team for this tournament
+             if _is_user_in_tournament_team(user_id, tournament_id):
+                 users_already_in_team.append(str(user_id)) # Collect IDs of problematic users
+
+        if users_already_in_team:
+             # Ideally, return the specific usernames, but IDs are simpler for now
+             raise HTTPException(
+                 status_code=status.HTTP_409_CONFLICT,
+                 detail=f"Cannot add users already registered in another team for this tournament. User IDs: {', '.join(users_already_in_team)}"
+             )
+             
+        # 3. Prepare the data for a bulk insert
         members_to_add = [
             {"team_id": str(team_id), "user_id": str(user_id)}
             for user_id in user_ids
         ]
 
-        # 3. Perform a single bulk insert operation
+        # 4. Perform a single bulk insert operation
         response = supabase_client.table('team_members').insert(members_to_add).execute()
         
         if not response.data:
-            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Could not add members. They may already be on the team or user IDs are invalid.")
+             # This could also happen if a user_id doesn't exist in the 'users' table due to foreign key constraints
+            raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Could not add members. They may already be on this team or user IDs might be invalid.")
             
         return response.data
 

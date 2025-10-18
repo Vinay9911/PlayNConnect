@@ -9,12 +9,14 @@ import ProfileForm from './pages/ProfileForm.jsx';
 import ProfileView from './pages/ProfileView.jsx';
 import TournamentFormPage from './pages/TournamentFormPage.jsx';
 import TournamentViewPage from './pages/TournamentView.jsx';
+import TournamentsListPage from './pages/TournamentListPage.jsx';
 import TournamentRegistrationPage from './pages/TournamentRegistrationPage.jsx';
+import DashboardPage from './pages/DashboardPage.jsx';
 import pNcLogo from './assets/playnconnect_logo.png';
 
 // This component contains all the routes and logic that need access to the user context.
 const AppContent = () => {
-    const { session, userProfile, loading, showProfileModal, setShowProfileModal, handleLogout } = useUser();
+    const { session, loading, showProfileModal, setShowProfileModal } = useUser();
     const navigate = useNavigate(); // We can use navigate here now
 
     if (loading) {
@@ -22,7 +24,7 @@ const AppContent = () => {
     }
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center">
+        <div className="min-h-screen w-full flex items-start justify-center pt-16">
             <Modal isOpen={showProfileModal} onClose={() => setShowProfileModal(false)}>
                 <div className="text-center">
                     <img src={pNcLogo} alt="Profile not found" className="w-20 h-20 mx-auto mb-4" />
@@ -41,24 +43,14 @@ const AppContent = () => {
             </Modal>
 
             <Routes>
-                <Route path="/" element={
-                    !session ? <AuthPage /> : (
-                        <div className="text-center">
-                            <h1 className="text-white text-3xl font-bold mb-4">Welcome, {userProfile?.username || session.user.email}</h1>
-                            <div className="flex flex-wrap gap-4 justify-center">
-                                {userProfile && <Link to={`/users/${userProfile.username}`} className="text-[#FF5733] hover:underline text-lg">View Profile</Link>}
-                                <Link to="/tournaments/create" className="bg-[#FF5733] text-white font-bold py-2 px-6 rounded-lg hover:bg-orange-600 transition">Create Tournament</Link>
-                            </div>
-                            <button onClick={handleLogout} className="block mx-auto mt-8 bg-gray-700 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-600">Logout</button>
-                        </div>
-                    )
-                } />
+                <Route path="/" element={!session ? <AuthPage /> : <DashboardPage />} />
                 <Route path="/profile/edit" element={session ? <ProfileForm /> : <AuthPage />} />
                 <Route path="/users/:username" element={<ProfileView />} />
                 <Route path="/tournaments/create" element={session ? <TournamentFormPage /> : <AuthPage />} />
                 <Route path="/tournaments/:slug/edit" element={session ? <TournamentFormPage /> : <AuthPage />} />
                 <Route path="/tournaments/:slug" element={<TournamentViewPage />} />
                 <Route path="/tournaments/:slug/register" element={session ? <TournamentRegistrationPage /> : <AuthPage />} />
+                <Route path="/tournaments" element={<TournamentsListPage />} />
             </Routes>
         </div>
     );
